@@ -90,6 +90,13 @@ struct Conv1DCustomOp:
         # the context is needed for some GPU calls
         ctx: DeviceContextPtr,
     ) raises:
+        """
+        # Args
+        - output: (?)
+        - input: (input_size,)
+        - kernel: (conv_size,)
+        - ctx: DeviceContextPtr.
+        """
         output_tensor = output.to_layout_tensor()
         input_tensor = input.to_layout_tensor()
         kernel_tensor = kernel.to_layout_tensor()
@@ -112,8 +119,15 @@ struct Conv1DCustomOp:
                 ),
                 0,
             )
-
-            # FILL ME IN with 1 line calling our conv1d_kernel
+            
+            comptime kernel = conv1d_kernel[in_layout, out_layout, conv_layout, input_size, conv_size, dtype]
+            gpu_ctx.enqueue_function_checked[kernel, kernel](
+                output_tensor,
+                input_tensor,
+                kernel_tensor,
+                grid_dim=BLOCKS_PER_GRID,
+                block_dim=(TPB,1),
+            )
 
         elif target == "cpu":
             # we can fallback to CPU
